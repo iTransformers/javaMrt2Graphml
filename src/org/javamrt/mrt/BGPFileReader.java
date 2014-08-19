@@ -15,6 +15,7 @@ import java.net.InetAddress;
 import java.util.LinkedList;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.javamrt.utils.Debug;
 import org.javamrt.utils.RecordAccess;
 
@@ -72,6 +73,8 @@ public class BGPFileReader {
 
 		if (this.toString.endsWith(".gz")) {
 			this.in = new BufferedInputStream(new GZIPInputStream(inStream));
+		} else if (this.toString().endsWith(".bz2")){
+            this.in = new BufferedInputStream(new BZip2CompressorInputStream(inStream));
 		} else {
 			this.in = new BufferedInputStream(inStream);
 		}
