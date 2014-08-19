@@ -183,4 +183,8 @@ protected TableDump(int           view,
   protected int sequence;
 
   protected String type="TABLE_DUMP";
+
+    public Attributes getAttributes() {
+        return attributes;
+    }
 }
