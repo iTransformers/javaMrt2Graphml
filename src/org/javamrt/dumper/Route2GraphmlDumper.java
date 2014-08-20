@@ -23,7 +23,7 @@ public class Route2GraphmlDumper {
         }
         String file = null;
         if (params.containsKey("-f")) {
-            file = new String(params.get("-f"));
+            file = params.get("-f");
         } else {
             usage();
             System.exit(1);
