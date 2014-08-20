@@ -1,20 +1,21 @@
 package org.javamrt.dumper;
 
+import org.javamrt.dumper.structures.ASContainer;
+import org.javamrt.dumper.structures.ASInfo;
+import org.javamrt.dumper.structures.ASPathInfo;
+import org.javamrt.dumper.structures.PrefixInfo;
 import org.javamrt.mrt.*;
 import org.javamrt.utils.Debug;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.net.InetAddress;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
-public class RouteDumper {
+public class Route2GraphmlDumper {
 
     public static void main(String args[]) throws IOException {
         Map<String, String> params = CmdLineParser.parseCmdLine(args);
-        PrintWriter writer = null;
+        PrintWriter writer;
         if (params.containsKey("-o")) {
             writer = new PrintWriter(params.get("-o"));
         } else {
@@ -27,11 +28,20 @@ public class RouteDumper {
             usage();
             System.exit(1);
         }
-        dumpToXmlString(new String[]{file}, writer);
+        ASContainer ases = new ASContainer();
+        dumpToXmlString(new String[]{file}, new PrintWriter(new NullOutputStream()), ases);
+        System.err.flush();
+        ASContainerDumper.dump(ases, writer);
         writer.close();
-	}
 
-    public static void dumpToXmlString(String[] files, Writer writer) throws IOException {
+    }
+    public static class NullOutputStream extends OutputStream{
+        @Override
+        public void write(int b) throws IOException { }
+    }
+
+
+    public static void dumpToXmlString(String[] files, Writer writer, ASContainer ases) throws IOException {
         MRTRecord record;
         BGPFileReader in;
         AS traverses = null;
@@ -59,7 +69,7 @@ public class RouteDumper {
                         }
                         if (record instanceof StateChange) {
                             if (oldall && checker.checkPeer()) {
-                                writer.append(toXmlString(record));
+                                writer.append(toXmlString(record, ases));
                                 continue;
                             }
                         }
@@ -78,7 +88,7 @@ public class RouteDumper {
                                 e.printStackTrace(System.err);
                                 System.err.printf("record = %s\n",record);
                             }
-                            writer.append(toXmlString(record));
+                            writer.append(toXmlString(record, ases));
                         }
                     } catch (RFC4893Exception rfce) {
                         boolean printRFC4893violations = false;
@@ -97,22 +107,22 @@ public class RouteDumper {
         writer.append("\n</root>");
     }
 
-    private static String toXmlString(MRTRecord record){
+    private static String toXmlString(MRTRecord record, ASContainer ases){
         if (record instanceof TableDump) {
-            return toXmlString((TableDump)record);
+            return toXmlString((TableDump)record, ases);
         } else if (record instanceof Bgp4Update) {
-            return toXmlString((Bgp4Update)record);
+            return toXmlString((Bgp4Update)record, ases);
         } else if (record instanceof StateChange){
-            return toXmlString((StateChange)record);
+            return toXmlString((StateChange)record, ases);
         }
         return null;
     }
 
-    private static String toXmlString(StateChange stateChange) {
+    private static String toXmlString(StateChange stateChange, ASContainer ases) {
         return null;
     }
 
-    private static String toXmlString(Bgp4Update bgp4Update) {
+    private static String toXmlString(Bgp4Update bgp4Update, ASContainer ases) {
         String peerString = ipAddressString(bgp4Update.getPeer());
 
         String result = "<"+"BGP4MP"+ " time=\"" + bgp4Update.getTime() + "\""
@@ -126,7 +136,7 @@ public class RouteDumper {
         return result;
     }
 
-    private static String toXmlString (TableDump tableDump)
+    private static String toXmlString (TableDump tableDump, ASContainer ases)
     {
         StringBuffer dumpString = new StringBuffer();
         String cleanPeer = // this.Peer.getHostAddress ().replaceFirst("(:0){2,7}", ":").replaceFirst("^0::", "::");
@@ -134,14 +144,17 @@ public class RouteDumper {
         dumpString =
                 new StringBuffer("\n<"+tableDump.getType()+"  origTime=\""+tableDump.getOrigTime()+"\"");
         dumpString.append (" updateType=\"B\" cleanPeer=\"" + cleanPeer  +"\" ");
-        if (tableDump.getPeerAS() != null)
-            dumpString.append (" AS=\""+tableDump.getPeerAS().toString()+"\"");
+        if (tableDump.getPeerAS() != null) {
+            String as = tableDump.getPeerAS().toString();
+            dumpString.append (" AS=\""+ as +"\"");
+        }
         dumpString.append (" prefix=\"" + tableDump.getPrefix().toString()+"\"");
         dumpString.append (">\n");
+
         Attributes tableDumpAttributes = tableDump.getAttributes();
 
         try {
-            dumpString.append (toXmlString(tableDumpAttributes));
+            dumpString.append (toXmlString(tableDumpAttributes, ases, tableDump.getPrefix()));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -158,7 +171,7 @@ public class RouteDumper {
                 replaceFirst(":::", "::");
     }
 
-    private static String toXmlString (Attributes attributes) throws Exception {
+    private static String toXmlString(Attributes attributes, ASContainer ases, Prefix prefix) throws Exception {
         StringBuilder toStr = new StringBuilder();
         toStr.append("\t<attributes>\n");
         for (int i = MRTConstants.ATTRIBUTE_AS_PATH; i < MRTConstants.ATTRIBUTE_TOTAL; i++) {
@@ -184,16 +197,31 @@ public class RouteDumper {
                             map.put(as, ++f);
                     }
                     Iterator<Map.Entry<String, Integer>> entries = map.entrySet().iterator();
+                    String lastAs = null;
                     while (entries.hasNext()) {
                         Map.Entry<String, Integer> thisEntry = (Map.Entry) entries.next();
                         String key = thisEntry.getKey();
                         Integer value = thisEntry.getValue();
                         if (entries.hasNext()){
-                            toStr.append("\n\t\t\t<AS count=\""+value+"\">"+key+"</AS>");
+                            toStr.append("\n\t\t\t<AS count=\""+value+"\">"+key+"</AS>");                            
                         }else{
                             toStr.append("\n\t\t\t<AS count=\""+value +"\" " +"last=\"true\">"+key+"</AS>");
+                            lastAs = key;
                         }
                     }
+                    for (String as : ASes) {
+                        if (!ases.getAsInfoMap().containsKey(as)){
+                            ASInfo asinfo = new ASInfo(as);
+                            ases.getAsInfoMap().put(as, asinfo);
+                        }
+                    }
+                    if (lastAs != null) {
+                        ASInfo asinfo = ases.getAsInfoMap().get(lastAs);
+                        asinfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
+                        ASPathInfo pathInfo = new ASPathInfo(Arrays.asList(ASes));
+                        ases.getAsPathInfoList().add(pathInfo);
+                    }
+
 
 //                    for (Map.Entry<String, Integer> entry : map.entrySet()){
 //                        if (entry.){
