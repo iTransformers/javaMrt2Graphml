@@ -1,5 +1,6 @@
 package org.javamrt.dumper;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.javamrt.dumper.structures.ASContainer;
 import org.javamrt.dumper.structures.ASInfo;
 import org.javamrt.dumper.structures.ASPathInfo;
@@ -28,11 +29,25 @@ public class Route2GraphmlDumper {
             usage();
             System.exit(1);
         }
+//        OutputStream os = new FileOutputStream("uncompressed");
+//        java.net.URL url = new java.net.URL(file);
+//        InputStream inStream = url.openStream();
+//        BufferedInputStream is = new BufferedInputStream(new BZip2CompressorInputStream(inStream));
+//        byte[] buffer = new byte[1024];
+//        int len;
+//        while ((len = is.read(buffer)) != -1){
+//            os.write(buffer,0,len);
+//        }
+//        os.flush();
+//        os.close();
+
         ASContainer ases = new ASContainer();
+        System.out.println("Reading router file");
         dumpToXmlString(new String[]{file}, new PrintWriter(new NullOutputStream()), ases);
         System.err.flush();
+        System.out.println("Starting to dump in file");
         ASContainerDumper.dump(ases, writer);
-        writer.close();
+//        writer.close();
 
     }
     public static class NullOutputStream extends OutputStream{

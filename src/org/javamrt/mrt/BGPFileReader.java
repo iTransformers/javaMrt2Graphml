@@ -74,7 +74,7 @@ public class BGPFileReader {
 		if (this.toString.endsWith(".gz")) {
 			this.in = new BufferedInputStream(new GZIPInputStream(inStream));
 		} else if (this.toString().endsWith(".bz2")){
-            this.in = new BufferedInputStream(new BZip2CompressorInputStream(inStream));
+            this.in = new BufferedInputStream(new BZip2CompressorInputStream(inStream), 1);
 		} else {
 			this.in = new BufferedInputStream(inStream);
 		}
