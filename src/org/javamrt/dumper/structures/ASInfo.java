@@ -31,6 +31,26 @@ public class ASInfo {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ASInfo asInfo = (ASInfo) o;
+
+        if (name != null ? !name.equals(asInfo.name) : asInfo.name != null) return false;
+        if (prefixInfo != null ? !prefixInfo.equals(asInfo.prefixInfo) : asInfo.prefixInfo != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (prefixInfo != null ? prefixInfo.hashCode() : 0);
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "ASInfo{" +
                 "name='" + name + '\'' +

@@ -60,11 +60,11 @@ public class ASContainerDumper {
     }
 
     private static void dumpAsPath(ASPathInfo asPathInfo, Writer writer, String tabs) throws IOException {
-        List<String> path = asPathInfo.getPath();
+        List<ASInfo> path = asPathInfo.getPath();
         int repeatCounter = 0;
         String lastNode = null;
-        for (String node : path) {
-            if (lastNode != null && lastNode.equals(node)) {
+        for (ASInfo node : path) {
+            if (lastNode != null && lastNode.equals(node.getName())) {
                 repeatCounter++;
                 continue;
             } else if (lastNode != null){
@@ -78,7 +78,7 @@ public class ASContainerDumper {
                 }
                 repeatCounter = 0;
             }
-            lastNode = node;
+            lastNode = node.getName();
         }
     }
 

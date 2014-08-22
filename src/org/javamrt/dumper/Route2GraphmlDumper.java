@@ -22,6 +22,14 @@ public class Route2GraphmlDumper {
             writer = new PrintWriter(System.out);
         }
         String file = null;
+        OutputStream fos;
+        if (params.containsKey("-f2")) {
+            String file2 = null;
+            file2 = params.get("-f2");
+            fos = new FileOutputStream(file2);
+        } else {
+            fos = new NullOutputStream();
+        }
         if (params.containsKey("-f")) {
             file = params.get("-f");
         } else {
@@ -29,13 +37,15 @@ public class Route2GraphmlDumper {
             System.exit(1);
         }
         ASContainer ases = new ASContainer();
-        dumpToXmlString(new String[]{file}, new PrintWriter(new NullOutputStream()), ases);
+        System.out.println("Start reading MRT file");
+        dumpToXmlString(new String[]{file}, new PrintWriter(fos), ases);
         System.err.flush();
+        System.out.println("Start dumping to Graphml file, size"+ases.getAsInfoMap().size());
         ASContainerDumper.dump(ases, writer);
         writer.close();
 
     }
-    public static class NullOutputStream extends OutputStream{
+    public static class NullOutputStream extends OutputStream {
         @Override
         public void write(int b) throws IOException { }
     }
@@ -55,6 +65,7 @@ public class Route2GraphmlDumper {
         for (String file1 : files) {
             try {
                 in = new BGPFileReader(file1);
+                int lastSize = 0;
                 while (!in.eof()) {
                     try {
                         if ((record = in.readNext()) == null){
@@ -76,7 +87,11 @@ public class Route2GraphmlDumper {
                         if ((record instanceof TableDump)
                                 || (record instanceof Bgp4Update)) {
                             checker = new Checker(prefix,peer,originator,traverses,record);
-
+                            int size = ases.getAsInfoMap().size();
+                            if ((size % 100) == 0 && size != lastSize) {
+                                System.out.println("Processed: "+ size);
+                                lastSize = size;
+                            }
                             try {
                                 if (!checker.checkPrefix())
                                     continue;
@@ -182,45 +197,51 @@ public class Route2GraphmlDumper {
                     type="Origin";
                     toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                } else if(i== MRTConstants.ATTRIBUTE_AS_PATH){
-                    type="ASPath";
-                    String[] ASes=attributes.getAttribute(i).toString().split(" ");
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">");
-                    LinkedHashMap<String,Integer> map = new LinkedHashMap<String, Integer>();
-                    for (String as : ASes)
-                    {
-                        Integer f = map.get(as);
+                } else {
+                    if (i == MRTConstants.ATTRIBUTE_AS_PATH) {
+                        type = "ASPath";
+                        String[] ASes = attributes.getAttribute(i).toString().split(" ");
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">");
+                        LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
+                        for (String as : ASes) {
+                            Integer f = map.get(as);
 
-                        if (f == null)
-                            map.put(as, 1);
-                        else
-                            map.put(as, ++f);
-                    }
-                    Iterator<Map.Entry<String, Integer>> entries = map.entrySet().iterator();
-                    String lastAs = null;
-                    while (entries.hasNext()) {
-                        Map.Entry<String, Integer> thisEntry = (Map.Entry) entries.next();
-                        String key = thisEntry.getKey();
-                        Integer value = thisEntry.getValue();
-                        if (entries.hasNext()){
-                            toStr.append("\n\t\t\t<AS count=\""+value+"\">"+key+"</AS>");                            
-                        }else{
-                            toStr.append("\n\t\t\t<AS count=\""+value +"\" " +"last=\"true\">"+key+"</AS>");
-                            lastAs = key;
+                            if (f == null)
+                                map.put(as, 1);
+                            else
+                                map.put(as, ++f);
                         }
-                    }
-                    for (String as : ASes) {
-                        if (!ases.getAsInfoMap().containsKey(as)){
-                            ASInfo asinfo = new ASInfo(as);
-                            ases.getAsInfoMap().put(as, asinfo);
+                        Iterator<Map.Entry<String, Integer>> entries = map.entrySet().iterator();
+                        String lastAs = null;
+                        while (entries.hasNext()) {
+                            Map.Entry<String, Integer> thisEntry = (Map.Entry) entries.next();
+                            String key = thisEntry.getKey();
+                            Integer value = thisEntry.getValue();
+                            if (entries.hasNext()) {
+                                toStr.append("\n\t\t\t<AS count=\"" + value + "\">" + key + "</AS>");
+                            } else {
+                                toStr.append("\n\t\t\t<AS count=\"" + value + "\" " + "last=\"true\">" + key + "</AS>");
+                                lastAs = key;
+                            }
                         }
-                    }
-                    if (lastAs != null) {
-                        ASInfo asinfo = ases.getAsInfoMap().get(lastAs);
-                        asinfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
-                        ASPathInfo pathInfo = new ASPathInfo(Arrays.asList(ASes));
-                        ases.getAsPathInfoList().add(pathInfo);
-                    }
+                        for (String as : ASes) {
+                            if (!ases.getAsInfoMap().containsKey(as)) {
+                                ASInfo asinfo = new ASInfo(as);
+                                ases.getAsInfoMap().put(as, asinfo);
+                            }
+                        }
+                        if (lastAs != null) {
+                            ASInfo asinfo = ases.getAsInfoMap().get(lastAs);
+                            asinfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
+
+                            ASPathInfo pathInfo = new ASPathInfo();
+                            List<ASInfo> path = pathInfo.getPath();
+                            for (String ases2 : ASes) {
+                                ASInfo asInfo2 = ases.getAsInfoMap().get(ases2);
+                                path.add(asInfo2);
+                            }
+                            ases.getAsPathInfoList().add(pathInfo);
+                        }
 
 
 //                    for (Map.Entry<String, Integer> entry : map.entrySet()){
@@ -230,79 +251,80 @@ public class Route2GraphmlDumper {
 //                            toStr.append("\n\t\t\t<AS count=\""+entry.getValue() +"\"" +"last=\"true\">"+entry.getKey()+"</AS>");
 //                        }
 //                    }
-                    toStr.append("\n\t\t</attribute>\n");
+                        toStr.append("\n\t\t</attribute>\n");
 
-                } else if(i == MRTConstants.ATTRIBUTE_NEXT_HOP){
-                    type="nextHop";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
-                }  else if(i== MRTConstants.ATTRIBUTE_LOCAL_PREF){
-                    type="localPref";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_NEXT_HOP) {
+                        type = "nextHop";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_LOCAL_PREF) {
+                        type = "localPref";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }   else if(i== MRTConstants.ATTRIBUTE_MULTI_EXIT){
-                    type="MED";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_MULTI_EXIT) {
+                        type = "MED";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                } else if(i== MRTConstants.ATTRIBUTE_COMMUNITY){
-                    type="Community";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_COMMUNITY) {
+                        type = "Community";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_ATOMIC_AGGREGATE){
-                    type="ATOMIC_AGGREGATE";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_ATOMIC_AGGREGATE) {
+                        type = "ATOMIC_AGGREGATE";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_AGGREGATOR){
-                    type="AGGREGATOR";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_AGGREGATOR) {
+                        type = "AGGREGATOR";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_ORIGINATOR_ID){
-                    type="ORIGINATOR_ID";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_ORIGINATOR_ID) {
+                        type = "ORIGINATOR_ID";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_CLUSTER_LIST){
-                    type="CLUSTER_LIST";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_CLUSTER_LIST) {
+                        type = "CLUSTER_LIST";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_DPA){
-                    type="DPA";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_DPA) {
+                        type = "DPA";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_ADVERTISER){
-                    type="ADVERTISER";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_ADVERTISER) {
+                        type = "ADVERTISER";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_CLUSTER_ID){
-                    type="CLUSTER_ID";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_CLUSTER_ID) {
+                        type = "CLUSTER_ID";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_MP_REACH){
-                    type="MP_REACH";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_MP_REACH) {
+                        type = "MP_REACH";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_MP_UNREACH){
-                    type="MP_UNREACH";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_MP_UNREACH) {
+                        type = "MP_UNREACH";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_EXT_COMMUNITIES){
-                    type="EXT_COMMUNITIES";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_EXT_COMMUNITIES) {
+                        type = "EXT_COMMUNITIES";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_AS4_PATH){
-                    type="AS4_PATH";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_AS4_PATH) {
+                        type = "AS4_PATH";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_AS4_AGGREGATOR){
-                    type="AS4_AGGREGATOR";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_AS4_AGGREGATOR) {
+                        type = "AS4_AGGREGATOR";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_ASPATHLIMIT){
-                    type="ASPATHLIMIT";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_ASPATHLIMIT) {
+                        type = "ASPATHLIMIT";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
-                }else if(i== MRTConstants.ATTRIBUTE_TOTAL){
-                    type="TOTAL";
-                    toStr.append("\t\t<attribute").append(" type="+"\""+type+"\""+">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
+                    } else if (i == MRTConstants.ATTRIBUTE_TOTAL) {
+                        type = "TOTAL";
+                        toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">").append(attributes.getAttribute(i).toString()).append("</attribute>\n");
 
+                    }
                 }
             }
 //            if (attributes.elementAt(i) != null && !"".equals(attributes.elementAt(i)))   {
