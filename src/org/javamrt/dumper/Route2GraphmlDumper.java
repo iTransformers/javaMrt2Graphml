@@ -2,7 +2,6 @@ package org.javamrt.dumper;
 
 import org.javamrt.dumper.structures.ASContainer;
 import org.javamrt.dumper.structures.ASInfo;
-import org.javamrt.dumper.structures.ASPathInfo;
 import org.javamrt.dumper.structures.PrefixInfo;
 import org.javamrt.mrt.*;
 import org.javamrt.utils.Debug;
@@ -12,6 +11,9 @@ import java.net.InetAddress;
 import java.util.*;
 
 public class Route2GraphmlDumper {
+    private final static String IPV4_KEY = "IPV4";
+    private final static String IPV6_KEY = "IPV6";
+
 
     public static void main(String args[]) throws IOException {
         Map<String, String> params = CmdLineParser.parseCmdLine(args);
@@ -22,13 +24,12 @@ public class Route2GraphmlDumper {
             writer = new PrintWriter(System.out);
         }
         String file = null;
-        OutputStream fos;
+        OutputStream logOutputStream;
         if (params.containsKey("-f2")) {
-            String file2 = null;
-            file2 = params.get("-f2");
-            fos = new FileOutputStream(file2);
+            String file2 = params.get("-f2");
+            logOutputStream = new FileOutputStream(file2);
         } else {
-            fos = new NullOutputStream();
+            logOutputStream = new NullOutputStream();
         }
         if (params.containsKey("-f")) {
             file = params.get("-f");
@@ -38,10 +39,19 @@ public class Route2GraphmlDumper {
         }
         ASContainer ases = new ASContainer();
         System.out.println("Start reading MRT file");
-        dumpToXmlString(new String[]{file}, new PrintWriter(fos), ases);
+        File tmpEdgeFile = File.createTempFile(file+"_",".txt");
+        System.out.println("Creating edge tmp file: "+tmpEdgeFile.getAbsolutePath());
+        Writer edgeWriter = new PrintWriter(tmpEdgeFile);
+        dumpToXmlString(new String[]{file}, new PrintWriter(logOutputStream), edgeWriter, ases);
+        System.out.println();
         System.err.flush();
-        System.out.println("Start dumping to Graphml file, size"+ases.getAsInfoMap().size());
-        ASContainerDumper.dump(ases, writer);
+        edgeWriter.close();
+
+        System.out.println("Start dumping to Graphml file, AS count: "+ases.getAsInfoMap().size());
+
+        dumpGraphml(ases, writer, tmpEdgeFile);
+        tmpEdgeFile.delete();
+
         writer.close();
 
     }
@@ -51,7 +61,7 @@ public class Route2GraphmlDumper {
     }
 
 
-    public static void dumpToXmlString(String[] files, Writer writer, ASContainer ases) throws IOException {
+    public static void dumpToXmlString(String[] files, Writer logWriter, Writer edgeWriter, ASContainer ases) throws IOException {
         MRTRecord record;
         BGPFileReader in;
         AS traverses = null;
@@ -60,8 +70,8 @@ public class Route2GraphmlDumper {
         Prefix prefix = null;
         Checker checker = null;
         boolean oldall = true;
-        writer.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?> ");
-        writer.append("<root>\n");
+        logWriter.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?> ");
+        logWriter.append("<root>\n");
         for (String file1 : files) {
             try {
                 in = new BGPFileReader(file1);
@@ -80,7 +90,7 @@ public class Route2GraphmlDumper {
                         }
                         if (record instanceof StateChange) {
                             if (oldall && checker.checkPeer()) {
-                                writer.append(toXmlString(record, ases));
+                                logWriter.append(toXmlString(record, ases, edgeWriter));
                                 continue;
                             }
                         }
@@ -89,7 +99,7 @@ public class Route2GraphmlDumper {
                             checker = new Checker(prefix,peer,originator,traverses,record);
                             int size = ases.getAsInfoMap().size();
                             if ((size % 100) == 0 && size != lastSize) {
-                                System.out.println("Processed: "+ size);
+                                System.out.print("\rProcessed: " + size);
                                 lastSize = size;
                             }
                             try {
@@ -103,7 +113,7 @@ public class Route2GraphmlDumper {
                                 e.printStackTrace(System.err);
                                 System.err.printf("record = %s\n",record);
                             }
-                            writer.append(toXmlString(record, ases));
+                            logWriter.append(toXmlString(record, ases, edgeWriter));
                         }
                     } catch (RFC4893Exception rfce) {
                         boolean printRFC4893violations = false;
@@ -119,25 +129,25 @@ public class Route2GraphmlDumper {
                 ex.printStackTrace(System.err);
             }
         }
-        writer.append("\n</root>");
+        logWriter.append("\n</root>");
     }
 
-    private static String toXmlString(MRTRecord record, ASContainer ases){
+    private static String toXmlString(MRTRecord record, ASContainer ases, Writer edgeWriter){
         if (record instanceof TableDump) {
-            return toXmlString((TableDump)record, ases);
+            return tableDumpToXmlString((TableDump) record, ases, edgeWriter);
         } else if (record instanceof Bgp4Update) {
-            return toXmlString((Bgp4Update)record, ases);
+            return bgp4UpdateToXmlString((Bgp4Update) record, ases);
         } else if (record instanceof StateChange){
-            return toXmlString((StateChange)record, ases);
+            return stateChangeToXmlString((StateChange) record, ases);
         }
         return null;
     }
 
-    private static String toXmlString(StateChange stateChange, ASContainer ases) {
+    private static String stateChangeToXmlString(StateChange stateChange, ASContainer ases) {
         return null;
     }
 
-    private static String toXmlString(Bgp4Update bgp4Update, ASContainer ases) {
+    private static String bgp4UpdateToXmlString(Bgp4Update bgp4Update, ASContainer ases) {
         String peerString = ipAddressString(bgp4Update.getPeer());
 
         String result = "<"+"BGP4MP"+ " time=\"" + bgp4Update.getTime() + "\""
@@ -151,7 +161,7 @@ public class Route2GraphmlDumper {
         return result;
     }
 
-    private static String toXmlString (TableDump tableDump, ASContainer ases)
+    private static String tableDumpToXmlString (TableDump tableDump, ASContainer ases, Writer edgeWriter)
     {
         StringBuffer dumpString = new StringBuffer();
         String cleanPeer = // this.Peer.getHostAddress ().replaceFirst("(:0){2,7}", ":").replaceFirst("^0::", "::");
@@ -169,7 +179,8 @@ public class Route2GraphmlDumper {
         Attributes tableDumpAttributes = tableDump.getAttributes();
 
         try {
-            dumpString.append (toXmlString(tableDumpAttributes, ases, tableDump.getPrefix()));
+            String str = attributesToXmlString(tableDumpAttributes, ases, tableDump.getPrefix(), edgeWriter);
+            dumpString.append (str);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -186,7 +197,7 @@ public class Route2GraphmlDumper {
                 replaceFirst(":::", "::");
     }
 
-    private static String toXmlString(Attributes attributes, ASContainer ases, Prefix prefix) throws Exception {
+    private static String attributesToXmlString(Attributes attributes, ASContainer ases, Prefix prefix, Writer edgeWriter) throws Exception {
         StringBuilder toStr = new StringBuilder();
         toStr.append("\t<attributes>\n");
         for (int i = MRTConstants.ATTRIBUTE_AS_PATH; i < MRTConstants.ATTRIBUTE_TOTAL; i++) {
@@ -201,6 +212,7 @@ public class Route2GraphmlDumper {
                     if (i == MRTConstants.ATTRIBUTE_AS_PATH) {
                         type = "ASPath";
                         String[] ASes = attributes.getAttribute(i).toString().split(" ");
+                        dumpAsPath(ASes, edgeWriter, "");
                         toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">");
                         LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
                         for (String as : ASes) {
@@ -212,7 +224,6 @@ public class Route2GraphmlDumper {
                                 map.put(as, ++f);
                         }
                         Iterator<Map.Entry<String, Integer>> entries = map.entrySet().iterator();
-                        String lastAs = null;
                         while (entries.hasNext()) {
                             Map.Entry<String, Integer> thisEntry = (Map.Entry) entries.next();
                             String key = thisEntry.getKey();
@@ -221,7 +232,6 @@ public class Route2GraphmlDumper {
                                 toStr.append("\n\t\t\t<AS count=\"" + value + "\">" + key + "</AS>");
                             } else {
                                 toStr.append("\n\t\t\t<AS count=\"" + value + "\" " + "last=\"true\">" + key + "</AS>");
-                                lastAs = key;
                             }
                         }
                         for (String as : ASes) {
@@ -229,18 +239,6 @@ public class Route2GraphmlDumper {
                                 ASInfo asinfo = new ASInfo(as);
                                 ases.getAsInfoMap().put(as, asinfo);
                             }
-                        }
-                        if (lastAs != null) {
-                            ASInfo asinfo = ases.getAsInfoMap().get(lastAs);
-                            asinfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
-
-                            ASPathInfo pathInfo = new ASPathInfo();
-                            List<ASInfo> path = pathInfo.getPath();
-                            for (String ases2 : ASes) {
-                                ASInfo asInfo2 = ases.getAsInfoMap().get(ases2);
-                                path.add(asInfo2);
-                            }
-                            ases.getAsPathInfoList().add(pathInfo);
                         }
 
 
@@ -341,6 +339,88 @@ public class Route2GraphmlDumper {
         }
         toStr.append("\t</attributes>\n");
         return toStr.toString();
+    }
+
+    public static void dumpGraphml(ASContainer ases, Writer writer, File edgeTmpFile) throws IOException {
+        writer.write("<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"   \n" +
+                "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  \n" +
+                "         xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns \n" +
+                "           http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"  \n" +
+                "         xmlns:y=\"http://www.yworks.com/xml/graphml\"> \n ");
+        writer.write("\t<graph id=\"G\" edgedefault=\"directed\">\n");
+        writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4Flag\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"weight\" for=\"edge\" type=\"int\"/>\n");
+        writer.write("\t\t<nodes>\n");
+        dumpNodes(ases, writer,"\t\t\t");
+        writer.write("\t\t</nodes>\n");
+        writer.write("\t\t<edges>\n");
+        dumpEdges(edgeTmpFile, writer,"\t\t\t");
+        writer.write("\t\t</edges>\n");
+        writer.write("\t</graph>  \n");
+        writer.write("</graphml>");
+    }
+
+    public static void dumpNodes(ASContainer ases, Writer writer, String tabs) throws IOException {
+        for (ASInfo asInfo : ases.getAsInfoMap().values()) {
+            writer.write(tabs+"<node id=\""+asInfo.getName()+"\">\n");
+            List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
+            Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
+            writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
+            writer.write(tabs+"</node>\n");
+        }
+    }
+
+    public static void dumpEdges(File edgeTmpFile, Writer writer, String tabs) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(edgeTmpFile));
+        PrintWriter pw = new PrintWriter(writer);
+        String line;
+        while ((line = br.readLine()) != null) {
+            pw.print(tabs);
+            pw.println(line);
+        }
+        pw.flush();
+    }
+
+    private static void dumpAsPath(String[] path, Writer writer, String tabs) throws IOException {
+        int repeatCounter = 0;
+        String lastNode = null;
+        for (String node : path) {
+            if (lastNode != null && lastNode.equals(node)) {
+                repeatCounter++;
+                continue;
+            } else if (lastNode != null){
+                String edgeAttributes= "id=\"" + lastNode + "_" + node + "\" source=\"" + lastNode + "\"" + " target=\"" + node+"\"";
+                if (repeatCounter > 0) {
+                    writer.write(tabs+"<edge "+ edgeAttributes + "\">\n");
+                    writer.write(tabs+"\t<data key=\"weight\">"+repeatCounter+"</data>\n");
+                    writer.write(tabs+"</edge>\n");
+                } else {
+                    writer.write(tabs+"<edge "+edgeAttributes+"/>\n");
+                }
+                repeatCounter = 0;
+            }
+            lastNode = node;
+        }
+    }
+
+    private static Map<String, Integer> countIpVXPrefixes(List<PrefixInfo> prefixInfoList){
+        HashMap<String, Integer> result = new HashMap<String, Integer>();
+        int ipV4Counter = 0;
+        int ipV6Counter = 0;
+        for (PrefixInfo prefixInfo : prefixInfoList) {
+            if (prefixInfo.getPrefix().contains(".")){
+                ipV4Counter++;
+            } else {
+                ipV6Counter++;
+            }
+        }
+        result.put(IPV4_KEY, ipV4Counter);
+        result.put(IPV6_KEY, ipV6Counter);
+        return result;
     }
 
 

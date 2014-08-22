@@ -11,8 +11,6 @@ import java.util.Map;
 public class ASContainer {
     private Map<String, ASInfo> asInfoMap = new HashMap<String, ASInfo>();
 
-    private List<ASPathInfo> asPathInfoList = new ArrayList<ASPathInfo>();
-
     public Map<String, ASInfo> getAsInfoMap() {
         return asInfoMap;
     }
@@ -21,19 +19,10 @@ public class ASContainer {
         this.asInfoMap = asInfoMap;
     }
 
-    public List<ASPathInfo> getAsPathInfoList() {
-        return asPathInfoList;
-    }
-
-    public void setAsPathInfoList(List<ASPathInfo> asPathInfoList) {
-        this.asPathInfoList = asPathInfoList;
-    }
-
     @Override
     public String toString() {
         return "ASContainer{" +
                 "asInfoMap=" + asInfoMap +
-                ", asPathInfoMap=" + asPathInfoList +
                 '}';
     }
 }
