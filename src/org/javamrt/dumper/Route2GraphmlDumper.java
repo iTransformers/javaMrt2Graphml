@@ -349,20 +349,17 @@ public class Route2GraphmlDumper {
                 "         xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns \n" +
                 "           http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"  \n" +
                 "         xmlns:y=\"http://www.yworks.com/xml/graphml\"> \n ");
-        writer.write("\t<graph id=\"G\" edgedefault=\"directed\">\n");
-        writer.write("\t<key id=\"countOriginatedIPv4Prefixes\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"countOriginatedIPv6Prefixes\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"directed\">\n");
+        writer.write("\t<key id=\"ASName\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6PrefixCount\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"IPv4Flag\" for=\"node\" type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"originatedIPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"originatedIPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"weight\" for=\"edge\" type=\"int\"/>\n");
-        writer.write("\t\t<nodes>\n");
         dumpNodes(ases, writer,"\t\t\t");
-        writer.write("\t\t</nodes>\n");
-        writer.write("\t\t<edges>\n");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
-        writer.write("\t\t</edges>\n");
         writer.write("\t</graph>  \n");
         writer.write("</graphml>");
     }
@@ -372,8 +369,8 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"<node id=\""+asInfo.getName()+"\">\n");
             List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
-           writer.write(tabs+"\t<data key=\"countOriginatedIPv4Prefixes\">"+ ipvXcounter.get(IPV4_KEY)+"</data>\n");
-            writer.write(tabs+"\t<data key=\"countOriginatedIPv6Prefixes\">"+ ipvXcounter.get(IPV6_KEY)+"</data>\n");
+           writer.write(tabs+"\t<data key=\"IPv4PrefixCount\">"+ ipvXcounter.get(IPV4_KEY)+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv6PrefixCount\">"+ ipvXcounter.get(IPV6_KEY)+"</data>\n");
             Map<String, Long> ipvXAddressSpace = countIpVXAdressSpace(prefixInfo);
             writer.write(tabs+"\t<data key=\"IPv4AddressSpace\">"+ ipvXAddressSpace.get(IPV4_KEY)+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6AddressSpace\">"+ ipvXAddressSpace.get(IPV6_KEY)+"</data>\n");
