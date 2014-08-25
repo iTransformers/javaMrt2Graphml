@@ -240,7 +240,9 @@ public class Route2GraphmlDumper {
                                 ases.getAsInfoMap().put(as, asinfo);
                             }
                         }
-
+                        String asKey = ASes[ASes.length - 1];
+                        ASInfo asInfo = ases.getAsInfoMap().get(asKey);
+                        asInfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
 
 //                    for (Map.Entry<String, Integer> entry : map.entrySet()){
 //                        if (entry.){
