@@ -374,11 +374,42 @@ public class Route2GraphmlDumper {
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
            writer.write(tabs+"\t<data key=\"countOriginatedIPv4Prefixes\">"+ ipvXcounter.get(IPV4_KEY)+"</data>\n");
             writer.write(tabs+"\t<data key=\"countOriginatedIPv6Prefixes\">"+ ipvXcounter.get(IPV6_KEY)+"</data>\n");
+            Map<String, Long> ipvXAddressSpace = countIpVXAdressSpace(prefixInfo);
+            writer.write(tabs+"\t<data key=\"IPv4AddressSpace\">"+ ipvXAddressSpace.get(IPV4_KEY)+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv6AddressSpace\">"+ ipvXAddressSpace.get(IPV6_KEY)+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
 
             writer.write(tabs+"</node>\n");
         }
+    }
+
+    private static Map<String, Long> countIpVXAdressSpace(List<PrefixInfo> prefixInfoList) {
+        HashMap<String, Long> result = new HashMap<String, Long>();
+        long ipv4AddressSpace = 0;
+        long ipv6AddressSpace = 0;
+        for (PrefixInfo prefixInfo : prefixInfoList) {
+            String prefix = prefixInfo.getPrefix();
+            int slashIndex = prefix.indexOf("/");
+            String maskStr = prefix.substring(slashIndex+1);
+            int mask = Integer.parseInt(maskStr);
+            if (prefix.contains(".")){ // IP_V4
+                ipv4AddressSpace += powOfInt(2,(32-mask));
+            } else { // IP_V6
+                ipv6AddressSpace += powOfInt(2,(64-mask));
+            }
+        }
+        result.put(IPV4_KEY, ipv4AddressSpace);
+        result.put(IPV6_KEY, ipv6AddressSpace);
+        return result;
+    }
+
+    private static long powOfInt(int M, int N){
+        long powerOfInt = 1;
+        for (int i=0;i<N;i++) {
+            powerOfInt = M * powerOfInt;
+        }
+        return powerOfInt;
     }
 
     public static void dumpEdges(File edgeTmpFile, Writer writer, String tabs) throws IOException {
