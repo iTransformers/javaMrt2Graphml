@@ -350,9 +350,12 @@ public class Route2GraphmlDumper {
                 "           http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"  \n" +
                 "         xmlns:y=\"http://www.yworks.com/xml/graphml\"> \n ");
         writer.write("\t<graph id=\"G\" edgedefault=\"directed\">\n");
-        writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"countOriginatedIPv4Prefixes\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"countOriginatedIPv6Prefixes\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"IPv4Flag\" for=\"node\" type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"originatedIPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"originatedIPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"weight\" for=\"edge\" type=\"int\"/>\n");
         writer.write("\t\t<nodes>\n");
         dumpNodes(ases, writer,"\t\t\t");
@@ -369,9 +372,11 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"<node id=\""+asInfo.getName()+"\">\n");
             List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
-            writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
+           writer.write(tabs+"\t<data key=\"countOriginatedIPv4Prefixes\">"+ ipvXcounter.get(IPV4_KEY)+"</data>\n");
+            writer.write(tabs+"\t<data key=\"countOriginatedIPv6Prefixes\">"+ ipvXcounter.get(IPV6_KEY)+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
+
             writer.write(tabs+"</node>\n");
         }
     }
