@@ -20,4 +20,15 @@ public class AsNameLoaderTestCase {
         Assert.assertEquals("3Com Corporation",asName.getDescription());
         Assert.assertEquals("US",asName.getCountry());
     }
+    @Test
+    //197787  -Reserved AS-,ZZ
+    public void testParseLine3(){
+        AsNameLoader.ASName asName = AsNameLoader.parseLine("197787  -Reserved AS-,ZZ");
+        Assert.assertEquals("197787",asName.getId());
+        Assert.assertEquals("AS197787",asName.getName());
+        Assert.assertEquals("-Reserved AS-",asName.getDescription());
+        Assert.assertEquals("ZZ",asName.getCountry());
+    }
+
+
 }
