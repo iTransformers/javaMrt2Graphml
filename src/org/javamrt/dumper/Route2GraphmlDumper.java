@@ -357,6 +357,9 @@ public class Route2GraphmlDumper {
         writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"Country\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"Description\" for=\"node\" type=\"string\"/>\n");
+
         dumpNodes(ases, writer,"\t\t\t");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
         writer.write("\t</graph>  \n");
@@ -377,8 +380,10 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
             if (asName != null) {
-                writer.write(tabs + "\t<data key=\"name\">" + asName.getName() + "</data>\n");
-                writer.write(tabs + "\t<data key=\"description\">" + asName.getDescription() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"ASName\">" + asName.getName() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"Description\">" + asName.getDescription() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"Country\">" + asName.getCountry() + "</data>\n");
+
             }
             writer.write(tabs+"</node>\n");
         }
