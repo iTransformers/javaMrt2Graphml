@@ -7,19 +7,19 @@ import java.util.List;
  * Created by vasko on 8/20/14.
  */
 public class ASInfo {
-    private String name;
+    private String id;
     private List<PrefixInfo> prefixInfo = new ArrayList<PrefixInfo>();
 
     public ASInfo(String name) {
-        this.name = name;
+        this.id = name;
     }
 
-    public String getName() {
-        return name;
+    public String getId() {
+        return id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public List<PrefixInfo> getPrefixInfo() {
@@ -37,7 +37,7 @@ public class ASInfo {
 
         ASInfo asInfo = (ASInfo) o;
 
-        if (name != null ? !name.equals(asInfo.name) : asInfo.name != null) return false;
+        if (id != null ? !id.equals(asInfo.id) : asInfo.id != null) return false;
         if (prefixInfo != null ? !prefixInfo.equals(asInfo.prefixInfo) : asInfo.prefixInfo != null) return false;
 
         return true;
@@ -45,7 +45,7 @@ public class ASInfo {
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
+        int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (prefixInfo != null ? prefixInfo.hashCode() : 0);
         return result;
     }
@@ -53,7 +53,7 @@ public class ASInfo {
     @Override
     public String toString() {
         return "ASInfo{" +
-                "name='" + name + '\'' +
+                "id='" + id + '\'' +
                 ", prefixInfo=" + prefixInfo +
                 '}';
     }

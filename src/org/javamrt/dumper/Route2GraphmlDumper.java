@@ -349,24 +349,27 @@ public class Route2GraphmlDumper {
                 "         xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns \n" +
                 "           http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"  \n" +
                 "         xmlns:y=\"http://www.yworks.com/xml/graphml\"> \n ");
-        writer.write("\t<graph id=\"G\" edgedefault=\"directed\">\n");
-        writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"directed\">\n");
+        writer.write("\t<key id=\"ASName\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6PrefixCount\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"IPv4Flag\" for=\"node\" type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"weight\" for=\"edge\" type=\"int\"/>\n");
-        writer.write("\t\t<nodes>\n");
+        writer.write("\t<key id=\"IPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
+        writer.write("\t<key id=\"Country\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"Description\" for=\"node\" type=\"string\"/>\n");
+
         dumpNodes(ases, writer,"\t\t\t");
-        writer.write("\t\t</nodes>\n");
-        writer.write("\t\t<edges>\n");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
-        writer.write("\t\t</edges>\n");
         writer.write("\t</graph>  \n");
         writer.write("</graphml>");
     }
 
     public static void dumpNodes(ASContainer ases, Writer writer, String tabs) throws IOException {
+        TreeMap<String, AsNameLoader.ASName> asNames = AsNameLoader.retrieveAsNames();
         for (ASInfo asInfo : ases.getAsInfoMap().values()) {
-            writer.write(tabs+"<node id=\""+asInfo.getName()+"\">\n");
+            writer.write(tabs+"<node id=\""+asInfo.getId()+"\">\n");
             List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
             Map<String, Long> ipvXAddressSpace = countIpVXAdressSpace(prefixInfo);
@@ -375,6 +378,13 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
+            AsNameLoader.ASName asName = asNames.get(asInfo.getId());
+            if (asName != null) {
+                writer.write(tabs + "\t<data key=\"ASName\">" + asName.getName() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"Description\">" + asName.getDescription() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"Country\">" + asName.getCountry() + "</data>\n");
+
+            }
             writer.write(tabs+"</node>\n");
         }
     }
