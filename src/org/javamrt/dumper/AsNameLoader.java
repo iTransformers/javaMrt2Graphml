@@ -43,11 +43,14 @@ public class AsNameLoader {
     }
 
     static ASName parseLine(String str) {
-        Pattern patter = Pattern.compile("^(\\d+)\\s*([0-9A-Z-]+)\\s*(?:-)?\\s*(.*),([a-zA-Z]+)");
+        Pattern patter = Pattern.compile("^(\\d+)\\s*([0-9A-Z][0-9A-Z-]+)?\\s*(?:-)?\\s*(.*),([a-zA-Z]+)");
         Matcher matcher = patter.matcher(str);
         if (matcher.matches()) {
             String id = matcher.group(1);
             String name = matcher.group(2);
+            if (name == null) {
+                name = "AS"+id;
+            }
             String org = matcher.group(3);
             String country = matcher.group(4);
             return new ASName(id, name, org, country);

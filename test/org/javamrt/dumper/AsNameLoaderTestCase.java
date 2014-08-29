@@ -26,7 +26,7 @@ public class AsNameLoaderTestCase {
         AsNameLoader.ASName asName = AsNameLoader.parseLine("197787  -Reserved AS-,ZZ");
         Assert.assertEquals("197787",asName.getId());
         Assert.assertEquals("AS197787",asName.getName());
-        Assert.assertEquals("-Reserved AS-",asName.getDescription());
+        Assert.assertEquals("Reserved AS-",asName.getDescription());
         Assert.assertEquals("ZZ",asName.getCountry());
     }
 
