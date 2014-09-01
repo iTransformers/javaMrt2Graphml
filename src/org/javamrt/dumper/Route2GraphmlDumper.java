@@ -379,6 +379,7 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
+            System.out.println();
             if (asName != null) {
                 writer.write(tabs + "\t<data key=\"ASName\">" + asName.getName() + "</data>\n");
                 writer.write(tabs + "\t<data key=\"Description\">" + asName.getDescription() + "</data>\n");
