@@ -1,14 +1,16 @@
 package org.javamrt.dumper.structures;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Iterator;
 
 /**
  * Created by vasko on 8/20/14.
  */
 public class ASInfo {
     private String id;
-    private List<PrefixInfo> prefixInfo = new ArrayList<PrefixInfo>();
+    private HashSet<PrefixInfo> prefixInfo = new HashSet<PrefixInfo>();
+    private Object sddsff;
+
 
     public ASInfo(String name) {
         this.id = name;
@@ -22,13 +24,14 @@ public class ASInfo {
         this.id = id;
     }
 
-    public List<PrefixInfo> getPrefixInfo() {
+    public HashSet<PrefixInfo> getPrefixInfo() {
         return prefixInfo;
     }
 
-    public void setPrefixInfo(List<PrefixInfo> prefixInfo) {
+    public void setPrefixInfo(HashSet<PrefixInfo> prefixInfo) {
         this.prefixInfo = prefixInfo;
     }
+
 
     @Override
     public boolean equals(Object o) {
@@ -50,11 +53,41 @@ public class ASInfo {
         return result;
     }
 
-    @Override
-    public String toString() {
-        return "ASInfo{" +
-                "id='" + id + '\'' +
-                ", prefixInfo=" + prefixInfo +
-                '}';
+    public String getIPv6PrefixInfotoString() {
+
+        StringBuffer prefixOutput = new StringBuffer();
+        if (prefixInfo != null) {
+
+
+            Iterator iter = prefixInfo.iterator();
+            while (iter.hasNext()) {
+                PrefixInfo prefix = (PrefixInfo) iter.next();
+                    if (prefix.toString().contains("::")) {
+                        prefixOutput.append(prefix.toString() + ",");
+                    }
+
+            }
+        }
+        //       }
+        return prefixOutput.toString();
     }
+    public String getIPv4PrefixInfotoString() {
+
+        StringBuffer prefixOutput = new StringBuffer();
+        if (prefixInfo != null) {
+
+
+            Iterator iter = prefixInfo.iterator();
+            while (iter.hasNext()) {
+                PrefixInfo prefix = (PrefixInfo) iter.next();
+                if (!prefix.toString().contains("::")) {
+                    prefixOutput.append(prefix.toString() + ",");
+                }
+
+            }
+        }
+        //       }
+        return prefixOutput.toString();
+    }
+
 }

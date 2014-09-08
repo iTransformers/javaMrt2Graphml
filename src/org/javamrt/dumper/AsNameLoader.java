@@ -35,7 +35,9 @@ public class AsNameLoader {
                 nextLine = reader.readLine();
             }
             ASName asName = parseLine(line);
-            asNames.put(asName.getId(), asName);
+            if(asName!=null){
+                 asNames.put(asName.getId(), asName);
+            }
             line = nextLine;
         } while (line != null);
         is.close();
@@ -56,7 +58,9 @@ public class AsNameLoader {
             return new ASName(id, name, org, country);
         }
         else {
-            throw new RuntimeException("Can not parse line: "+str);
+            System.out.println("Can not parse line: "+str);
+            return null;
+
         }
     }
     public static class ASName {

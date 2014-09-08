@@ -359,6 +359,9 @@ public class Route2GraphmlDumper {
         writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
         writer.write("\t<key id=\"Country\" for=\"node\" type=\"string\"/>\n");
         writer.write("\t<key id=\"Description\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" type=\"string\"/>\n");
+
 
         dumpNodes(ases, writer,"\t\t\t");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
@@ -370,7 +373,7 @@ public class Route2GraphmlDumper {
         TreeMap<String, AsNameLoader.ASName> asNames = AsNameLoader.retrieveAsNames();
         for (ASInfo asInfo : ases.getAsInfoMap().values()) {
             writer.write(tabs+"<node id=\""+asInfo.getId()+"\">\n");
-            List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
+            HashSet<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
             Map<String, Long> ipvXAddressSpace = countIpVXAdressSpace(prefixInfo);
             writer.write(tabs+"\t<data key=\"IPv4AddressSpace\">"+ ipvXAddressSpace.get(IPV4_KEY)+"</data>\n");
@@ -378,6 +381,9 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
+            writer.write(tabs+"\t<data key id=\"IPv4Prefixes\">"+ asInfo.getIPv4PrefixInfotoString()+"</data>\n");
+            writer.write(tabs+"\t<data key id=\"IPv6Prefixes\">"+ asInfo.getIPv6PrefixInfotoString()+"</data>\n");
+
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
             System.out.println();
             if (asName != null) {
@@ -390,7 +396,7 @@ public class Route2GraphmlDumper {
         }
     }
 
-    private static Map<String, Long> countIpVXAdressSpace(List<PrefixInfo> prefixInfoList) {
+    private static Map<String, Long> countIpVXAdressSpace(HashSet<PrefixInfo> prefixInfoList) {
         HashMap<String, Long> result = new HashMap<String, Long>();
         long ipv4AddressSpace = 0;
         long ipv6AddressSpace = 0;
@@ -451,7 +457,7 @@ public class Route2GraphmlDumper {
         }
     }
 
-    private static Map<String, Integer> countIpVXPrefixes(List<PrefixInfo> prefixInfoList){
+    private static Map<String, Integer> countIpVXPrefixes(HashSet<PrefixInfo> prefixInfoList){
         HashMap<String, Integer> result = new HashMap<String, Integer>();
         int ipV4Counter = 0;
         int ipV6Counter = 0;

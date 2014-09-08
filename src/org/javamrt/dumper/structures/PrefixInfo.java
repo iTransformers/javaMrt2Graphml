@@ -38,8 +38,6 @@ public class PrefixInfo {
 
     @Override
     public String toString() {
-        return "PrefixInfo{" +
-                "prefix='" + prefix + '\'' +
-                '}';
+        return prefix;
     }
 }
