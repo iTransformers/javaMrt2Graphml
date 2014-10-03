@@ -345,22 +345,19 @@ public class Route2GraphmlDumper {
 
     public static void dumpGraphml(ASContainer ases, Writer writer, File edgeTmpFile) throws IOException {
         writer.write("<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"   \n" +
-                "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  \n" +
-                "         xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns \n" +
-                "           http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"  \n" +
-                "         xmlns:y=\"http://www.yworks.com/xml/graphml\"> \n ");
-        writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"directed\">\n");
-        writer.write("\t<key id=\"ASName\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"IPv6PrefixCount\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"IPv4Flag\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"IPv6Flag\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"IPv4AddressSpace\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" type=\"int\"/>\n");
-        writer.write("\t<key id=\"Country\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"Description\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" type=\"string\"/>\n");
-        writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" type=\"string\"/>\n");
+                "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"> \n");
+        writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"undirected\">\n");
+        writer.write("\t<key id=\"ASName\" for=\"node\" attr.name=\"ASName\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" attr.name=\"IPv4PrefixCount\" attr.type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6PrefixCount\" for=\"node\" attr.name=\"IPv6PrefixCount\"  attr.type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv4Flag\" for=\"node\" attr.name=\"IPv4Flag\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv6Flag\" for=\"node\" attr.name=\"IPv6Flag\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4AddressSpace\" for=\"node\" attr.name=\"IPv4AddressSpace\" attr.type=\"int\"/>\n");
+        writer.write("\t<key id=\"IPv6AddressSpace\" for=\"node\" attr.name=\"IPv6AddressSpace\" attr.type=\"int\"/>\n");
+        writer.write("\t<key id=\"Country\" for=\"node\" attr.name=\"Country\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"Description\" for=\"node\" attr.name=\"Description\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" attr.name=\"IPv4Prefixes\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" attr.name=\"IPv6Prefixes\" attr.type=\"string\"/>\n");
 
 
         dumpNodes(ases, writer,"\t\t\t");
@@ -381,8 +378,8 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
-            writer.write(tabs+"\t<data key id=\"IPv4Prefixes\">"+ asInfo.getIPv4PrefixInfotoString()+"</data>\n");
-            writer.write(tabs+"\t<data key id=\"IPv6Prefixes\">"+ asInfo.getIPv6PrefixInfotoString()+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv4Prefixes\">"+ asInfo.getIPv4PrefixInfotoString()+"</data>\n");
+            writer.write(tabs+"\t<data key=\"IPv6Prefixes\">"+ asInfo.getIPv6PrefixInfotoString()+"</data>\n");
 
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
             System.out.println();
