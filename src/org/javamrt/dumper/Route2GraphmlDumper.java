@@ -61,7 +61,7 @@ public class Route2GraphmlDumper {
     }
 
 
-    public static void dumpToXmlString(String[] files, Writer logWriter, Writer edgeWriter, ASContainer ases) throws IOException {
+    public static void  dumpToXmlString(String[] files, Writer logWriter, Writer edgeWriter, ASContainer ases) throws IOException {
         MRTRecord record;
         BGPFileReader in;
         AS traverses = null;
@@ -358,6 +358,7 @@ public class Route2GraphmlDumper {
         writer.write("\t<key id=\"Description\" for=\"node\" attr.name=\"Description\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" attr.name=\"IPv4Prefixes\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" attr.name=\"IPv6Prefixes\" attr.type=\"string\"/>\n");
+        writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" attr.name=\"countOriginatedPrefixes\" attr.type=\"int\"/>\n");
 
 
         dumpNodes(ases, writer,"\t\t\t");
@@ -384,9 +385,9 @@ public class Route2GraphmlDumper {
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
             System.out.println();
             if (asName != null) {
-                writer.write(tabs + "\t<data key=\"ASName\">" + asName.getName() + "</data>\n");
-                writer.write(tabs + "\t<data key=\"Description\">" + asName.getDescription() + "</data>\n");
-                writer.write(tabs + "\t<data key=\"Country\">" + asName.getCountry() + "</data>\n");
+                writer.write(tabs + "\t<data key=\"ASName\">" + "<![CDATA["+asName.getName() +"]]>"+ "</data>\n");
+                writer.write(tabs + "\t<data key=\"Description\">" +"<![CDATA["+ asName.getDescription() +"]]>"+ "</data>\n");
+                writer.write(tabs + "\t<data key=\"Country\">" +"<![CDATA["+ asName.getCountry() +"]]>" +"</data>\n");
 
             }
             writer.write(tabs+"</node>\n");
@@ -440,7 +441,16 @@ public class Route2GraphmlDumper {
                 repeatCounter++;
                 continue;
             } else if (lastNode != null){
-                String edgeAttributes= "id=\"" + lastNode + "_" + node + "\" source=\"" + lastNode + "\"" + " target=\"" + node+"\"";
+                //TODO Here we have to sort on node and lastNode in order always to preserve the uniquiness of the edge_id.
+                int comparsionResult =  node.compareToIgnoreCase(lastNode);
+                String edgeAttributes = null;
+
+                if (comparsionResult > 0){
+                     edgeAttributes= "id=\"" + node + "_" + lastNode + "\" source=\"" + node + "\"" + " target=\"" + lastNode+"\"";
+
+                }  else{
+                     edgeAttributes= "id=\"" + lastNode + "_" + node + "\" source=\"" + lastNode + "\"" + " target=\"" + node+"\"";
+                }
                 if (repeatCounter > 0) {
                     writer.write(tabs+"<edge "+ edgeAttributes + "\">\n");
                     writer.write(tabs+"\t<data key=\"weight\">"+repeatCounter+"</data>\n");
