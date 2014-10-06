@@ -9,6 +9,8 @@ import org.javamrt.utils.Debug;
 import java.io.*;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class Route2GraphmlDumper {
     private final static String IPV4_KEY = "IPV4";
@@ -18,8 +20,12 @@ public class Route2GraphmlDumper {
     public static void main(String args[]) throws IOException {
         Map<String, String> params = CmdLineParser.parseCmdLine(args);
         PrintWriter writer;
+        ZipOutputStream zos = null;
         if (params.containsKey("-o")) {
             writer = new PrintWriter(params.get("-o"));
+        } else if (params.containsKey("-z")) {
+            zos = new ZipOutputStream(new FileOutputStream(params.get("-z")));
+            writer = new PrintWriter(zos);
         } else {
             writer = new PrintWriter(System.out);
         }
@@ -48,11 +54,21 @@ public class Route2GraphmlDumper {
         edgeWriter.close();
 
         System.out.println("Start dumping to Graphml file, AS count: "+ases.getAsInfoMap().size());
-
-        dumpGraphml(ases, writer, tmpEdgeFile);
-        tmpEdgeFile.delete();
-
-        writer.close();
+        if (zos != null) {
+            zos.putNextEntry(new ZipEntry(params.get("-z").replace(".zip", "")));
+        }
+        try {
+            dumpGraphml(ases, writer, tmpEdgeFile);
+        } finally {
+            tmpEdgeFile.delete();
+            if (zos != null) {
+                zos.closeEntry();
+                zos.close();
+            } else {
+                writer.close();
+            }
+        }
+        System.out.println("Graphml file created");
 
     }
     public static class NullOutputStream extends OutputStream {
@@ -70,6 +86,7 @@ public class Route2GraphmlDumper {
         Prefix prefix = null;
         Checker checker = null;
         boolean oldall = true;
+        Set<String> edgesIds = new TreeSet<String>();
         logWriter.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?> ");
         logWriter.append("<root>\n");
         for (String file1 : files) {
@@ -90,7 +107,7 @@ public class Route2GraphmlDumper {
                         }
                         if (record instanceof StateChange) {
                             if (oldall && checker.checkPeer()) {
-                                logWriter.append(toXmlString(record, ases, edgeWriter));
+                                logWriter.append(toXmlString(record, ases, edgeWriter, edgesIds));
                                 continue;
                             }
                         }
@@ -113,7 +130,7 @@ public class Route2GraphmlDumper {
                                 e.printStackTrace(System.err);
                                 System.err.printf("record = %s\n",record);
                             }
-                            logWriter.append(toXmlString(record, ases, edgeWriter));
+                            logWriter.append(toXmlString(record, ases, edgeWriter, edgesIds));
                         }
                     } catch (RFC4893Exception rfce) {
                         boolean printRFC4893violations = false;
@@ -132,9 +149,9 @@ public class Route2GraphmlDumper {
         logWriter.append("\n</root>");
     }
 
-    private static String toXmlString(MRTRecord record, ASContainer ases, Writer edgeWriter){
+    private static String toXmlString(MRTRecord record, ASContainer ases, Writer edgeWriter, Set<String> edgesIds){
         if (record instanceof TableDump) {
-            return tableDumpToXmlString((TableDump) record, ases, edgeWriter);
+            return tableDumpToXmlString((TableDump) record, ases, edgeWriter, edgesIds);
         } else if (record instanceof Bgp4Update) {
             return bgp4UpdateToXmlString((Bgp4Update) record, ases);
         } else if (record instanceof StateChange){
@@ -161,7 +178,7 @@ public class Route2GraphmlDumper {
         return result;
     }
 
-    private static String tableDumpToXmlString (TableDump tableDump, ASContainer ases, Writer edgeWriter)
+    private static String tableDumpToXmlString (TableDump tableDump, ASContainer ases, Writer edgeWriter, Set<String> edgesIds)
     {
         StringBuffer dumpString = new StringBuffer();
         String cleanPeer = // this.Peer.getHostAddress ().replaceFirst("(:0){2,7}", ":").replaceFirst("^0::", "::");
@@ -179,7 +196,7 @@ public class Route2GraphmlDumper {
         Attributes tableDumpAttributes = tableDump.getAttributes();
 
         try {
-            String str = attributesToXmlString(tableDumpAttributes, ases, tableDump.getPrefix(), edgeWriter);
+            String str = attributesToXmlString(tableDumpAttributes, ases, tableDump.getPrefix(), edgeWriter, edgesIds);
             dumpString.append (str);
         } catch (Exception e) {
             e.printStackTrace();
@@ -197,7 +214,7 @@ public class Route2GraphmlDumper {
                 replaceFirst(":::", "::");
     }
 
-    private static String attributesToXmlString(Attributes attributes, ASContainer ases, Prefix prefix, Writer edgeWriter) throws Exception {
+    private static String attributesToXmlString(Attributes attributes, ASContainer ases, Prefix prefix, Writer edgeWriter, Set<String> edgesIds) throws Exception {
         StringBuilder toStr = new StringBuilder();
         toStr.append("\t<attributes>\n");
         for (int i = MRTConstants.ATTRIBUTE_AS_PATH; i < MRTConstants.ATTRIBUTE_TOTAL; i++) {
@@ -212,7 +229,7 @@ public class Route2GraphmlDumper {
                     if (i == MRTConstants.ATTRIBUTE_AS_PATH) {
                         type = "ASPath";
                         String[] ASes = attributes.getAttribute(i).toString().split(" ");
-                        dumpAsPath(ASes, edgeWriter, "");
+                        dumpAsPath(ASes, edgeWriter, "", edgesIds);
                         toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">");
                         LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
                         for (String as : ASes) {
@@ -242,7 +259,9 @@ public class Route2GraphmlDumper {
                         }
                         String asKey = ASes[ASes.length - 1];
                         ASInfo asInfo = ases.getAsInfoMap().get(asKey);
-                        asInfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
+                        if (!asInfo.getPrefixInfo().contains(new PrefixInfo(prefix.toString()))) {
+                            asInfo.getPrefixInfo().add(new PrefixInfo(prefix.toString()));
+                        }
 
 //                    for (Map.Entry<String, Integer> entry : map.entrySet()){
 //                        if (entry.){
@@ -345,7 +364,7 @@ public class Route2GraphmlDumper {
 
     public static void dumpGraphml(ASContainer ases, Writer writer, File edgeTmpFile) throws IOException {
         writer.write("<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"   \n" +
-                "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"> \n");
+                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"> \n");
         writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"undirected\">\n");
         writer.write("\t<key id=\"ASName\" for=\"node\" attr.name=\"ASName\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" attr.name=\"IPv4PrefixCount\" attr.type=\"int\"/>\n");
@@ -359,8 +378,6 @@ public class Route2GraphmlDumper {
         writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" attr.name=\"IPv4Prefixes\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" attr.name=\"IPv6Prefixes\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" attr.name=\"countOriginatedPrefixes\" attr.type=\"int\"/>\n");
-
-
         dumpNodes(ases, writer,"\t\t\t");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
         writer.write("\t</graph>  \n");
@@ -371,7 +388,7 @@ public class Route2GraphmlDumper {
         TreeMap<String, AsNameLoader.ASName> asNames = AsNameLoader.retrieveAsNames();
         for (ASInfo asInfo : ases.getAsInfoMap().values()) {
             writer.write(tabs+"<node id=\""+asInfo.getId()+"\">\n");
-            HashSet<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
+            List<PrefixInfo> prefixInfo = asInfo.getPrefixInfo();
             Map<String, Integer> ipvXcounter = countIpVXPrefixes(prefixInfo);
             Map<String, Long> ipvXAddressSpace = countIpVXAdressSpace(prefixInfo);
             writer.write(tabs+"\t<data key=\"IPv4AddressSpace\">"+ ipvXAddressSpace.get(IPV4_KEY)+"</data>\n");
@@ -379,11 +396,7 @@ public class Route2GraphmlDumper {
             writer.write(tabs+"\t<data key=\"countOriginatedPrefixes\">"+ prefixInfo.size()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv4Flag\">"+ ("" + (ipvXcounter.get(IPV4_KEY) > 0)).toUpperCase()+"</data>\n");
             writer.write(tabs+"\t<data key=\"IPv6Flag\">"+ ("" + (ipvXcounter.get(IPV6_KEY) > 0)).toUpperCase()+"</data>\n");
-            writer.write(tabs+"\t<data key=\"IPv4Prefixes\">"+ asInfo.getIPv4PrefixInfotoString()+"</data>\n");
-            writer.write(tabs+"\t<data key=\"IPv6Prefixes\">"+ asInfo.getIPv6PrefixInfotoString()+"</data>\n");
-
             AsNameLoader.ASName asName = asNames.get(asInfo.getId());
-            System.out.println();
             if (asName != null) {
                 writer.write(tabs + "\t<data key=\"ASName\">" + "<![CDATA["+asName.getName() +"]]>"+ "</data>\n");
                 writer.write(tabs + "\t<data key=\"Description\">" +"<![CDATA["+ asName.getDescription() +"]]>"+ "</data>\n");
@@ -394,7 +407,7 @@ public class Route2GraphmlDumper {
         }
     }
 
-    private static Map<String, Long> countIpVXAdressSpace(HashSet<PrefixInfo> prefixInfoList) {
+    private static Map<String, Long> countIpVXAdressSpace(List<PrefixInfo> prefixInfoList) {
         HashMap<String, Long> result = new HashMap<String, Long>();
         long ipv4AddressSpace = 0;
         long ipv6AddressSpace = 0;
@@ -433,7 +446,7 @@ public class Route2GraphmlDumper {
         pw.flush();
     }
 
-    private static void dumpAsPath(String[] path, Writer writer, String tabs) throws IOException {
+    private static void dumpAsPath(String[] path, Writer writer, String tabs, Set<String> edgesIds) throws IOException {
         int repeatCounter = 0;
         String lastNode = null;
         for (String node : path) {
@@ -441,22 +454,22 @@ public class Route2GraphmlDumper {
                 repeatCounter++;
                 continue;
             } else if (lastNode != null){
-                //TODO Here we have to sort on node and lastNode in order always to preserve the uniquiness of the edge_id.
-                int comparsionResult =  node.compareToIgnoreCase(lastNode);
-                String edgeAttributes = null;
-
-                if (comparsionResult > 0){
-                     edgeAttributes= "id=\"" + node + "_" + lastNode + "\" source=\"" + node + "\"" + " target=\"" + lastNode+"\"";
-
-                }  else{
-                     edgeAttributes= "id=\"" + lastNode + "_" + node + "\" source=\"" + lastNode + "\"" + " target=\"" + node+"\"";
-                }
-                if (repeatCounter > 0) {
-                    writer.write(tabs+"<edge "+ edgeAttributes + "\">\n");
-                    writer.write(tabs+"\t<data key=\"weight\">"+repeatCounter+"</data>\n");
-                    writer.write(tabs+"</edge>\n");
+                String id;
+                if (lastNode.compareTo(node) < 0) {
+                    id = lastNode + "_" + node;
                 } else {
-                    writer.write(tabs+"<edge "+edgeAttributes+"/>\n");
+                    id =  node + "_" + lastNode;
+                }
+                if (!edgesIds.contains(id)) {
+                    edgesIds.add(id);
+                    String edgeAttributes = "id=\"" + id + "\" source=\"" + lastNode + "\"" + " target=\"" + node + "\"";
+                    if (repeatCounter > 0) {
+                        writer.write(tabs + "<edge " + edgeAttributes + "\">\n");
+                        writer.write(tabs + "\t<data key=\"weight\">" + repeatCounter + "</data>\n");
+                        writer.write(tabs + "</edge>\n");
+                    } else {
+                        writer.write(tabs + "<edge " + edgeAttributes + "/>\n");
+                    }
                 }
                 repeatCounter = 0;
             }
@@ -464,7 +477,7 @@ public class Route2GraphmlDumper {
         }
     }
 
-    private static Map<String, Integer> countIpVXPrefixes(HashSet<PrefixInfo> prefixInfoList){
+    private static Map<String, Integer> countIpVXPrefixes(List<PrefixInfo> prefixInfoList){
         HashMap<String, Integer> result = new HashMap<String, Integer>();
         int ipV4Counter = 0;
         int ipV6Counter = 0;
