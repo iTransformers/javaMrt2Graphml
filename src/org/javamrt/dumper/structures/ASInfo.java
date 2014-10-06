@@ -1,14 +1,16 @@
 package org.javamrt.dumper.structures;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by vasko on 8/20/14.
  */
 public class ASInfo {
     private String id;
-    private HashSet<PrefixInfo> prefixInfo = new HashSet<PrefixInfo>();
+    private List<PrefixInfo> prefixInfo = new ArrayList<PrefixInfo>();
     private Object sddsff;
 
 
@@ -24,11 +26,11 @@ public class ASInfo {
         this.id = id;
     }
 
-    public HashSet<PrefixInfo> getPrefixInfo() {
+    public List<PrefixInfo> getPrefixInfo() {
         return prefixInfo;
     }
 
-    public void setPrefixInfo(HashSet<PrefixInfo> prefixInfo) {
+    public void setPrefixInfo(List<PrefixInfo> prefixInfo) {
         this.prefixInfo = prefixInfo;
     }
 

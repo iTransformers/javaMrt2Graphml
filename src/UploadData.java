@@ -36,11 +36,13 @@ public class UploadData {
             }
         };
         HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-        String url = "https://192.168.89.10:443/guestFile?id=4411&token=5271a733-5756-982d-8cb9-b0b63911e29d4411";
+        String url = "https://192.168.30.53:443/guestFile?id=12891&token=522196ad-2a0e-c349-7eab-6215447ab8d912891";
         String fileName = "/home/vasko/projects/POD/vasil-trial-license.dat";
         File file = new File(fileName);
         long fileSize = file.length();
+        long startTime = System.currentTimeMillis();
         uploadData(url, fileName, fileSize);
+        System.out.println(System.currentTimeMillis()-startTime);
     }
     private static void uploadData(String urlString, String fileName,long fileSize)
             throws Exception {
