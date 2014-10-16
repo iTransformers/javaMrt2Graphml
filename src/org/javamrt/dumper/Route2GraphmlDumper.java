@@ -228,11 +228,25 @@ public class Route2GraphmlDumper {
                 } else {
                     if (i == MRTConstants.ATTRIBUTE_AS_PATH) {
                         type = "ASPath";
-                        String[] ASes = attributes.getAttribute(i).toString().split(" ");
-                        dumpAsPath(ASes, edgeWriter, "", edgesIds);
+                        String[] ASes = attributes.getAttribute(i).toString().replace("(","").replace(")","").split(" ");
+                        int j=0;
+                        for (String as : ASes) {
+                            if(as.contains(".")){
+                                String [] asss = as.toString().split("\\.");
+                                int firstOctet = new Integer(asss[0]);
+                                int secondOctet = new Integer(asss[1]);
+                                int as1 = firstOctet*65536+secondOctet;
+                                ASes[j] = String.valueOf(as1);
+                         //       System.out.println(ASes[j]);
+                            }
+                            j++;
+
+                        }
+                            dumpAsPath(ASes, edgeWriter, "", edgesIds);
                         toStr.append("\t\t<attribute").append(" type=" + "\"" + type + "\"" + ">");
                         LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
                         for (String as : ASes) {
+
                             Integer f = map.get(as);
 
                             if (f == null)
@@ -378,6 +392,8 @@ public class Route2GraphmlDumper {
         writer.write("\t<key id=\"IPv4Prefixes\" for=\"node\" attr.name=\"IPv4Prefixes\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv6Prefixes\" for=\"node\" attr.name=\"IPv6Prefixes\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"countOriginatedPrefixes\" for=\"node\" attr.name=\"countOriginatedPrefixes\" attr.type=\"int\"/>\n");
+        writer.write("\t<key id=\"weight\" for=\"edge\" attr.name=\"weight\" attr.type=\"int\"/>\n");
+
         dumpNodes(ases, writer,"\t\t\t");
         dumpEdges(edgeTmpFile, writer,"\t\t\t");
         writer.write("\t</graph>  \n");
@@ -464,11 +480,12 @@ public class Route2GraphmlDumper {
                     edgesIds.add(id);
                     String edgeAttributes = "id=\"" + id + "\" source=\"" + lastNode + "\"" + " target=\"" + node + "\"";
                     if (repeatCounter > 0) {
-                        writer.write(tabs + "<edge " + edgeAttributes + "\">\n");
+                        writer.write(tabs + "<edge " + edgeAttributes + ">\n");
                         writer.write(tabs + "\t<data key=\"weight\">" + repeatCounter + "</data>\n");
                         writer.write(tabs + "</edge>\n");
                     } else {
                         writer.write(tabs + "<edge " + edgeAttributes + "/>\n");
+                        writer.write(tabs + "\t<data key=\"weight\">" + repeatCounter + "</data>\n");
                     }
                 }
                 repeatCounter = 0;
