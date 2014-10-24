@@ -485,7 +485,6 @@ public class Route2GraphmlDumper {
                         writer.write(tabs + "</edge>\n");
                     } else {
                         writer.write(tabs + "<edge " + edgeAttributes + "/>\n");
-                        writer.write(tabs + "\t<data key=\"weight\">" + repeatCounter + "</data>\n");
                     }
                 }
                 repeatCounter = 0;
