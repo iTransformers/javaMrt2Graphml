@@ -377,8 +377,7 @@ public class Route2GraphmlDumper {
     }
 
     public static void dumpGraphml(ASContainer ases, Writer writer, File edgeTmpFile) throws IOException {
-        writer.write("<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"   \n" +
-                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"> \n");
+        writer.write("<graphml xmlns:fn=\"http://www.w3.org/2005/xpath-functions\" xmlns:functx=\"http://www.functx.com\" xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n \n");
         writer.write("\t<graph id=\"BGPInternetMap\" edgedefault=\"undirected\">\n");
         writer.write("\t<key id=\"ASName\" for=\"node\" attr.name=\"ASName\" attr.type=\"string\"/>\n");
         writer.write("\t<key id=\"IPv4PrefixCount\" for=\"node\" attr.name=\"IPv4PrefixCount\" attr.type=\"int\"/>\n");
