@@ -50,5 +50,4 @@ The result of this are Internet wide maps like those bellow:
 
 ![Small](http://www.itransformers.net/bgpPeeringMap/internet_iTr_small.png)
 
-
 ![Big](http://www.itransformers.net/bgpPeeringMap/internet_iTr.png)
