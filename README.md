@@ -44,7 +44,7 @@ Once you download it you have to unzip it and pass the unziped file as an "-f" a
 
 
 ##4.4 Visualize the result
-The final result (network.graphml) could be visualized with gephi or [netTransformer|https://github.com/iTransformers/netTransformer] or any other Graph Viz tool able to draw graphml file format. 
+The final result (network.graphml) could be visualized with gephi or [netTransformer](https://github.com/iTransformers/netTransformer) or any other Graph Viz tool able to draw graphml file format. 
 
 The result of this are Internet wide maps like those bellow:
 
