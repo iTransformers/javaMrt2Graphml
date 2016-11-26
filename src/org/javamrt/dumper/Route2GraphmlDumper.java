@@ -514,12 +514,10 @@ public class Route2GraphmlDumper {
                     if (repeatCounter > 0) {
                         writer.write(tabs + "<edge " + edgeAttributes + ">\n");
                         writer.write(tabs + "\t<data key=\"weight\">" + repeatCounter + "</data>\n");
-                        writer.write(tabs + "\t<data key=\"include\">"+"YES"+"</data>\n");
 
                         writer.write(tabs + "</edge>\n");
                     } else {
                         writer.write(tabs + "<edge " + edgeAttributes + ">\n");
-                        writer.write(tabs + "\t<data key=\"include\">"+"YES"+"</data>\n");
                         writer.write(tabs + "</edge>\n");
 
                     }

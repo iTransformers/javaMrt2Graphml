@@ -45,20 +45,52 @@ public class AsNameLoader {
     }
 
     static ASName parseLine(String str) {
-        Pattern patter = Pattern.compile("^(\\d+)\\s*([0-9A-Z][0-9A-Z-]+)?\\s*(?:-)?\\s*(.*),([a-zA-Z]+)");
+        String expr = "^(\\d+)\\s*(?:-)?\\s*(.*),\\s*(.*)$";
+        String expr1 = "^(\\d+)\\s*(\\w+)?\\s*(?:-)?\\s*(.*),([a-zA-Z]+)";
+        Pattern patter = Pattern.compile(expr);
         Matcher matcher = patter.matcher(str);
         if (matcher.matches()) {
-            String id = matcher.group(1);
-            String name = matcher.group(2);
-            if (name == null) {
-                name = "AS"+id;
+
+            if (matcher.groupCount() == 4) {
+                String id = matcher.group(1);
+                String name = matcher.group(2);
+                if (name == null) {
+                    name = "AS" + id;
+                }
+                String org = matcher.group(3);
+                String country = matcher.group(4);
+                return new ASName(id, name, org, country);
+
+            }else {
+                String id = matcher.group(1);
+                String name = matcher.group(2);
+                String org = null;
+                if (name == null) {
+                    name = "AS" + id;
+                }   else {
+                    String [] names = name.split(" - ");
+                    if (names[0]!=null){
+                        name = names[0];
+
+                    if (names.length == 2)
+                        org = names[1];
+
+
+                    }
+
+
+
+                }
+
+                String country = matcher.group(3);
+
+                return new ASName(id,name ,org, country);
+
+
             }
-            String org = matcher.group(3);
-            String country = matcher.group(4);
-            return new ASName(id, name, org, country);
         }
         else {
-            System.out.println("Can not parse line: "+str);
+                System.out.println("Can not parse line: "+str);
             return null;
 
         }
