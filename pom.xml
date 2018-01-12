@@ -44,7 +44,7 @@
       <configuration>
         <archive>
           <manifest>
-            <mainClass>${fully.qualified.main.class}</mainClass>
+            <mainClass>org.javamrt.dumper.Route2GraphmlDumper</mainClass>
           </manifest>
         </archive>
         <descriptorRefs>
